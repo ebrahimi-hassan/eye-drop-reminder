@@ -1,0 +1,33 @@
+name: Eye Drop Reminder
+
+on:
+  # هر ۱۵ دقیقه (به وقت UTC) — اسکریپت زمان تهران را خودش حساب می‌کند
+  schedule:
+    - cron: "*/15 * * * *"
+  # برای تست دستی: روی "Run workflow" بزنید و گزینه test را تیک بزنید
+  workflow_dispatch:
+    inputs:
+      send_test:
+        description: "ارسال پیام آزمایشی"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eyedrop-reminder
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run reminder check
+        env:
+          SEND_TEST: ${{ inputs.send_test && '1' || '0' }}
+        run: python3 .github/scripts/remind.py
