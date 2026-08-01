@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f766e">
   <meta name="description" content="یادآور قطره چشم بر اساس نسخه پزشک">
   <title>یادآور قطره چشم</title>
-  <link rel="manifest" href="manifest.json?v=2">
+  <link rel="manifest" href="manifest.json?v=3">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <style>
@@ -157,12 +157,25 @@
     <div class="status-line" id="notifStatus"></div>
   </div>
 
+  <div class="card" id="fallbackCard" style="display:none">
+    <div class="card-title">📲 راه‌حل جایگزین مطمئن (اپ ntfy)</div>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 8px;line-height:1.8">
+      اگر اعلان مرورگر این گوشی کار نکرد، این روش <b>۱۰۰٪</b> کار می‌کند و به گوگل‌پلی هم نیاز ندارد:
+    </p>
+    <ol style="font-size:13px;line-height:2;padding-right:18px;margin:0 0 8px">
+      <li>اپ <b>ntfy</b> را از گوگل‌پلی نصب کنید (رایگان)</li>
+      <li>این لینک را در اپ ntfy باز کنید تا مشترک شود:</li>
+    </ol>
+    <div id="topicLink" style="direction:ltr;text-align:left;background:#f1f5f9;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;word-break:break-all;margin:8px 0"></div>
+    <button class="btn btn-ghost" id="copyTopicBtn">کپی کردن لینک</button>
+  </div>
+
   <footer>
     نسخه پزشک: بتامتازون و کلوبیوتیک — ۴ هفته<br>
     این برنامه جایگزین توصیه پزشک نیست. در صورت شک با پزشک خود مشورت کنید.<br>
     <span id="appVersion" style="opacity:.7"></span>
   </footer>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

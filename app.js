@@ -3,7 +3,7 @@
 
 const VAPID_PUBLIC_KEY =
   "BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc";
-const APP_VERSION = "2";
+const APP_VERSION = "3";
 const SCHEDULE_URL = "schedule.json";
 const doneKey = (dateStr, time) => "done:" + dateStr + ":" + time;
 
@@ -206,10 +206,36 @@ async function getOrCreatePushSubscription() {
   });
 }
 
+function endpointHost(sub) {
+  try {
+    return new URL(sub.endpoint).host;
+  } catch (e) {
+    return "?";
+  }
+}
+
+function showNtfyFallback() {
+  const card = $("fallbackCard");
+  if (!card) return;
+  const linkEl = $("topicLink");
+  const copyBtn = $("copyTopicBtn");
+  if (schedule && schedule.topic) {
+    const link = schedule.server + "/" + schedule.topic;
+    linkEl.textContent = link;
+    copyBtn.onclick = () => {
+      if (navigator.clipboard) navigator.clipboard.writeText(link);
+      copyBtn.textContent = "✅ کپی شد";
+      setTimeout(() => { copyBtn.textContent = "کپی کردن لینک"; }, 2000);
+    };
+  }
+  card.style.display = "block";
+}
+
 async function subscribePush() {
   try {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      $("notifStatus").textContent = "مرورگر این گوشی از اعلان وب پشتیبانی نمی‌کند";
+      $("notifStatus").textContent = "مرورگر این گوشی از اعلان وب پشتیبانی نمی‌کند — از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
+      showNtfyFallback();
       return;
     }
     const perm = await Notification.requestPermission();
@@ -219,6 +245,12 @@ async function subscribePush() {
     }
     const sub = await getOrCreatePushSubscription();
     const keys = sub.keys || {};
+    if (!keys.auth || !keys.p256dh) {
+      $("notifStatus").textContent = "مرورگر این گوشی اشتراک اعلان را بدون کلید می‌سازد و سرور آن را قبول نمی‌کند — از راه‌حل جایگزین استفاده کنید.";
+      console.log("[eyedrops] Broken subscription, no keys:", sub.endpoint);
+      showNtfyFallback();
+      return;
+    }
     const body = JSON.stringify({
       endpoint: sub.endpoint,
       auth: keys.auth,
@@ -226,7 +258,12 @@ async function subscribePush() {
       topics: [schedule.topic],
     });
     const res = await fetch(schedule.server + "/v1/webpush", { method: "POST", headers: { "Content-Type": "application/json" }, body });
-    if (!res.ok) throw new Error("WebPush register HTTP " + res.status);
+    if (!res.ok) {
+      $("notifStatus").textContent = "سرور اعلان مرورگر این گوشی را قبول نکرد (endpoint: " + endpointHost(sub) + ") — از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
+      console.log("[eyedrops] Register rejected:", res.status, sub.endpoint);
+      showNtfyFallback();
+      return;
+    }
     localStorage.setItem("pushEnabled", "1");
     $("notifStatus").textContent = "✅ اعلان فعال شد — حتی با قفل بودن گوشی هم یادآوری می‌آید";
     updateNotifButtons(true);
@@ -313,9 +350,13 @@ async function init() {
   // وضعیت فعلی اعلان
   try {
     const sub = await getPushSubscription();
-    updateNotifButtons(!!sub);
-    if (sub) $("notifStatus").textContent = "✅ اعلان فعال است";
-    else $("notifStatus").textContent = "برای دریافت یادآوری در قفل گوشی، اعلان را فعال کنید";
+    const validSub = sub && sub.keys && sub.keys.auth && sub.keys.p256dh;
+    updateNotifButtons(!!validSub);
+    if (validSub) $("notifStatus").textContent = "✅ اعلان فعال است";
+    else if (sub) {
+      $("notifStatus").textContent = "اشتراک اعلان این مرورگر ناقص است — از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
+      showNtfyFallback();
+    } else $("notifStatus").textContent = "برای دریافت یادآوری در قفل گوشی، اعلان را فعال کنید";
   } catch (e) { /* ignore */ }
 }
 
