@@ -3,6 +3,7 @@
 
 const VAPID_PUBLIC_KEY =
   "BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc";
+const APP_VERSION = "2";
 const SCHEDULE_URL = "schedule.json";
 const doneKey = (dateStr, time) => "done:" + dateStr + ":" + time;
 
@@ -187,35 +188,52 @@ async function getPushSubscription() {
   return reg.pushManager.getSubscription();
 }
 
-async function subscribePush() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    $("notifStatus").textContent = "مرورگر این گوشی از اعلان وب پشتیبانی نمی‌کند";
-    return;
-  }
-  const perm = await Notification.requestPermission();
-  if (perm !== "granted") {
-    $("notifStatus").textContent = "اجازه اعلان داده نشد. از تنظیمات مرورگر اجازه دهید.";
-    return;
-  }
+async function getOrCreatePushSubscription() {
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
-  if (!sub) {
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+  // اشتراک سالم: باید endpoint و کلیدهای auth/p256dh داشته باشد
+  if (sub && sub.endpoint && sub.keys && sub.keys.auth && sub.keys.p256dh) {
+    return sub;
   }
-  const body = JSON.stringify({
-    endpoint: sub.endpoint,
-    auth: sub.keys.auth,
-    p256dh: sub.keys.p256dh,
-    topics: [schedule.topic],
+  // اشتراک موجود خراب/قدیمی است — حذفش می‌کنیم و یک اشتراک نو می‌سازیم
+  if (sub) {
+    try { await sub.unsubscribe(); } catch (e) { /* ignore */ }
+    sub = null;
+  }
+  return reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
   });
-  const res = await fetch(schedule.server + "/v1/webpush", { method: "POST", headers: { "Content-Type": "application/json" }, body });
-  if (!res.ok) throw new Error("WebPush register HTTP " + res.status);
-  localStorage.setItem("pushEnabled", "1");
-  $("notifStatus").textContent = "✅ اعلان فعال شد — حتی با قفل بودن گوشی هم یادآوری می‌آید";
-  updateNotifButtons(true);
+}
+
+async function subscribePush() {
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      $("notifStatus").textContent = "مرورگر این گوشی از اعلان وب پشتیبانی نمی‌کند";
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") {
+      $("notifStatus").textContent = "اجازه اعلان داده نشد. از تنظیمات مرورگر اجازه دهید.";
+      return;
+    }
+    const sub = await getOrCreatePushSubscription();
+    const keys = sub.keys || {};
+    const body = JSON.stringify({
+      endpoint: sub.endpoint,
+      auth: keys.auth,
+      p256dh: keys.p256dh,
+      topics: [schedule.topic],
+    });
+    const res = await fetch(schedule.server + "/v1/webpush", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    if (!res.ok) throw new Error("WebPush register HTTP " + res.status);
+    localStorage.setItem("pushEnabled", "1");
+    $("notifStatus").textContent = "✅ اعلان فعال شد — حتی با قفل بودن گوشی هم یادآوری می‌آید";
+    updateNotifButtons(true);
+  } catch (e) {
+    $("notifStatus").textContent = "خطا در فعال‌سازی اعلان: " + (e && e.message ? e.message : e);
+    console.error(e);
+  }
 }
 
 async function unsubscribePush() {
@@ -270,12 +288,14 @@ async function localScheduler() {
 /* ---------- راه‌اندازی ---------- */
 function registerSW() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch((e) => console.error("SW error", e));
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch((e) => console.error("SW error", e));
   }
 }
 
 async function init() {
   registerSW();
+  const verEl = document.getElementById("appVersion");
+  if (verEl) verEl.textContent = "نسخه " + APP_VERSION;
   try {
     const res = await fetch(SCHEDULE_URL + "?v=" + Date.now());
     schedule = await res.json();

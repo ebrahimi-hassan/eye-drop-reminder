@@ -1,7 +1,7 @@
 /* سرویس ورکر — کش آفلاین و دریافت اعلان وب پوش */
 "use strict";
 
-const CACHE_NAME = "eyedrops-v1";
+const CACHE_NAME = "eyedrops-v2";
 const CORE_ASSETS = ["./", "index.html", "app.js", "manifest.json", "schedule.json", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -22,8 +22,14 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET") return;
 
-  // schedule.json و index.html: اول اینترنت (تا به‌روزرسانی‌ها دیده شود)، سپس کش
-  if (url.pathname.includes("schedule.json") || url.pathname.endsWith("index.html") || url.pathname.endsWith("/")) {
+  // فایل‌های اصلی: اول اینترنت (تا به‌روزرسانی‌ها دیده شود)، سپس کش
+  if (
+    url.pathname.includes("schedule.json") ||
+    url.pathname.endsWith("index.html") ||
+    url.pathname.endsWith("/") ||
+    url.pathname.endsWith("app.js") ||
+    url.pathname.endsWith("manifest.json")
+  ) {
     event.respondWith(
       fetch(event.request)
         .then((res) => {
