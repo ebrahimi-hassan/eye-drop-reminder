@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="description" content="یادآور قطره چشم بر اساس نسخه پزشک">
+  <title>یادآور قطره چشم</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --green: #16a34a;
+      --amber: #d97706;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px 14px calc(28px + env(safe-area-inset-bottom));
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    header .logo {
+      width: 64px; height: 64px; margin: 0 auto 8px;
+      background: linear-gradient(135deg, var(--teal), #14b8a6);
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px;
+      box-shadow: 0 6px 16px rgba(15,118,110,.25);
+    }
+    h1 { font-size: 22px; font-weight: 800; }
+    header .today { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.07);
+      border: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700; color: var(--muted);
+      text-transform: none; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .week-banner {
+      background: linear-gradient(135deg, var(--teal), #14b8a6);
+      color: #fff; border-radius: 14px; padding: 14px 16px;
+      margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .week-banner .wlabel { font-weight: 800; font-size: 16px; }
+    .week-banner .wsub { font-size: 12px; opacity: .9; margin-top: 2px; }
+    .week-banner .wprogress { background: rgba(255,255,255,.25); border-radius: 99px; height: 8px; width: 96px; margin-top: 6px; }
+    .week-banner .wprogress > div { background: #fff; height: 100%; border-radius: 99px; }
+
+    .next-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 14px;
+    }
+    .next-row .time { font-size: 26px; font-weight: 800; color: var(--teal); direction: ltr; }
+    .next-row .desc { font-size: 13px; color: var(--text); }
+    .next-row .desc small { color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--border); }
+    th { font-size: 12px; color: var(--muted); font-weight: 700; }
+    td.time { font-weight: 800; direction: ltr; white-space: nowrap; }
+    td .drug { display: inline-block; padding: 3px 8px; border-radius: 8px; font-size: 12px; }
+    .drug-b { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .drug-c { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .drug-bc { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .drug-0 { color: var(--muted); font-size: 12px; }
+    .done-btn {
+      border: 1px solid var(--border); background: #fff; color: var(--muted);
+      border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+      font-family: inherit;
+    }
+    .done-btn.done { background: var(--green); color: #fff; border-color: var(--green); }
+
+    .btn {
+      display: block; width: 100%; padding: 13px;
+      border-radius: 12px; border: none; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit; margin-bottom: 10px;
+    }
+    .btn-primary { background: var(--teal); color: #fff; }
+    .btn-primary:disabled { background: #99f6e4; color: #134e4a; cursor: not-allowed; }
+    .btn-ghost { background: #fff; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost.danger { color: var(--red); border-color: #fecaca; }
+    .status-line { font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
+
+    .empty { text-align: center; color: var(--muted); padding: 18px 0; font-size: 14px; }
+    footer { text-align: center; color: #94a3b8; font-size: 11px; margin-top: 18px; }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --muted: #94a3b8;
+        --border: #334155;
+      }
+      .btn-ghost { background: var(--card); color: var(--muted); }
+      .btn-ghost.danger { color: #f87171; border-color: #7f1d1d; }
+      .next-row { background: #134e4a; border-color: #0f766e; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">💧</div>
+    <h1>یادآور قطره چشم</h1>
+    <div class="today" id="todayLabel"></div>
+  </header>
+
+  <div class="week-banner" id="weekBanner">
+    <div>
+      <div class="wlabel" id="weekLabel">—</div>
+      <div class="wsub" id="weekSub"></div>
+      <div class="wprogress"><div id="weekProgress" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="next-row" id="nextReminder">
+    <div>
+      <div class="desc" id="nextDesc">در حال بارگذاری…</div>
+      <small id="nextSmall" style="color:var(--muted)"></small>
+    </div>
+    <div class="time" id="nextTime">--:--</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 برنامه امروز</div>
+    <div id="todayTable"><div class="empty">در حال بارگذاری…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔔 اعلان</div>
+    <button class="btn btn-primary" id="enableBtn">فعال کردن اعلان</button>
+    <button class="btn btn-ghost danger" id="disableBtn" style="display:none">خاموش کردن اعلان</button>
+    <div class="status-line" id="notifStatus"></div>
+  </div>
+
+  <footer>
+    نسخه پزشک: بتامتازون و کلوبیوتیک — ۴ هفته<br>
+    این برنامه جایگزین توصیه پزشک نیست. در صورت شک با پزشک خود مشورت کنید.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
