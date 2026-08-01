@@ -3,7 +3,7 @@
 
 const VAPID_PUBLIC_KEY =
   "BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc";
-const APP_VERSION = "3";
+const APP_VERSION = "4";
 const SCHEDULE_URL = "schedule.json";
 const doneKey = (dateStr, time) => "done:" + dateStr + ":" + time;
 
@@ -188,22 +188,48 @@ async function getPushSubscription() {
   return reg.pushManager.getSubscription();
 }
 
+const VALID_SUB = (s) => !!s && !!s.endpoint && !!s.keys && !!s.keys.auth && !!s.keys.p256dh;
+
 async function getOrCreatePushSubscription() {
   const reg = await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  // اشتراک سالم: باید endpoint و کلیدهای auth/p256dh داشته باشد
-  if (sub && sub.endpoint && sub.keys && sub.keys.auth && sub.keys.p256dh) {
-    return sub;
+  const pm = reg.pushManager;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // ۱) اشتراک موجود و سالم؟
+  let existing = await pm.getSubscription();
+  if (VALID_SUB(existing)) return existing;
+
+  // ۲) اشتراک خراب/قدیمی را کاملاً حذف کن (گاهی یک بار کافی نیست)
+  if (existing) {
+    try { await existing.unsubscribe(); } catch (e) { /* ignore */ }
+    await sleep(800);
   }
-  // اشتراک موجود خراب/قدیمی است — حذفش می‌کنیم و یک اشتراک نو می‌سازیم
-  if (sub) {
-    try { await sub.unsubscribe(); } catch (e) { /* ignore */ }
-    sub = null;
+  let remaining = await pm.getSubscription();
+  if (remaining) {
+    try { await remaining.unsubscribe(); } catch (e) { /* ignore */ }
+    await sleep(800);
   }
-  return reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
+
+  // ۳) اشتراک تازه بساز (تا ۳ بار تلاش — گاهی تلاش اول ناقص برمی‌گردد)
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const fresh = await pm.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+      if (VALID_SUB(fresh)) return fresh;
+      console.log("[eyedrops] subscribe returned keyless subscription, attempt", attempt, fresh.endpoint);
+      try { await fresh.unsubscribe(); } catch (e) { /* ignore */ }
+      await sleep(800);
+    } catch (e) {
+      console.log("[eyedrops] subscribe attempt", attempt, "failed:", e.message);
+      if (attempt === 3) throw e;
+      await sleep(800);
+    }
+  }
+  const last = await pm.getSubscription();
+  if (last) return last;
+  throw new Error("مرورگر نتوانست اشتراک اعلان بسازد");
 }
 
 function endpointHost(sub) {
@@ -246,7 +272,7 @@ async function subscribePush() {
     const sub = await getOrCreatePushSubscription();
     const keys = sub.keys || {};
     if (!keys.auth || !keys.p256dh) {
-      $("notifStatus").textContent = "مرورگر این گوشی اشتراک اعلان را بدون کلید می‌سازد و سرور آن را قبول نمی‌کند — از راه‌حل جایگزین استفاده کنید.";
+      $("notifStatus").textContent = "اشتراک اعلان بدون کلید امنیتی است (endpoint: " + endpointHost(sub) + "). در کروم: منوی ⋯ → Site settings → Clear & reset، بعد دوباره امتحان کنید. یا از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
       console.log("[eyedrops] Broken subscription, no keys:", sub.endpoint);
       showNtfyFallback();
       return;
@@ -354,7 +380,7 @@ async function init() {
     updateNotifButtons(!!validSub);
     if (validSub) $("notifStatus").textContent = "✅ اعلان فعال است";
     else if (sub) {
-      $("notifStatus").textContent = "اشتراک اعلان این مرورگر ناقص است — از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
+      $("notifStatus").textContent = "اشتراک اعلان این مرورگر ناقص است. در کروم: منوی ⋯ → Site settings → Clear & reset، بعد دوباره امتحان کنید — یا از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
       showNtfyFallback();
     } else $("notifStatus").textContent = "برای دریافت یادآوری در قفل گوشی، اعلان را فعال کنید";
   } catch (e) { /* ignore */ }
