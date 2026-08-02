@@ -1,7 +1,7 @@
 /* سرویس ورکر — کش آفلاین و دریافت اعلان وب پوش */
 "use strict";
 
-const CACHE_NAME = "eyedrops-v4";
+const CACHE_NAME = "eyedrops-v5";
 const CORE_ASSETS = ["./", "index.html", "app.js", "manifest.json", "schedule.json", "icons/icon-192.png", "icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

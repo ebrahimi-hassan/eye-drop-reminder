@@ -3,7 +3,7 @@
 
 const VAPID_PUBLIC_KEY =
   "BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc";
-const APP_VERSION = "4";
+const APP_VERSION = "5";
 const SCHEDULE_URL = "schedule.json";
 const doneKey = (dateStr, time) => "done:" + dateStr + ":" + time;
 
@@ -240,6 +240,29 @@ function endpointHost(sub) {
   }
 }
 
+/* ریست کامل: حذف همه سرویس‌ورکرها، اشتراک‌ها و کش — برای رفع وضعیت خراب */
+async function fullReset() {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      try {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+      } catch (e) { /* ignore */ }
+      await reg.unregister();
+    }
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch (e) { /* ignore */ }
+    localStorage.clear();
+    $("notifStatus").textContent = "✅ ریست کامل انجام شد. حالا برنامه را کاملاً ببندید و دوباره باز کنید، سپس «فعال کردن اعلان» را بزنید.";
+    $("resetBtn").style.display = "none";
+  } catch (e) {
+    $("notifStatus").textContent = "خطا در ریست: " + e.message;
+  }
+}
+
 function showNtfyFallback() {
   const card = $("fallbackCard");
   if (!card) return;
@@ -294,8 +317,10 @@ async function subscribePush() {
     $("notifStatus").textContent = "✅ اعلان فعال شد — حتی با قفل بودن گوشی هم یادآوری می‌آید";
     updateNotifButtons(true);
   } catch (e) {
-    $("notifStatus").textContent = "خطا در فعال‌سازی اعلان: " + (e && e.message ? e.message : e);
-    console.error(e);
+    const name = e && e.name ? e.name : "";
+    const msg = e && e.message ? e.message : String(e);
+    $("notifStatus").textContent = "خطا در فعال‌سازی اعلان (" + name + "): " + msg + " — دکمه «ریست کامل» را بزنید و دوباره امتحان کنید.";
+    console.error("[eyedrops] subscribe error:", e);
   }
 }
 
@@ -370,8 +395,9 @@ async function init() {
   setInterval(() => { today = new Date(); render(); }, 60000); // هر دقیقه به‌روزرسانی
   setInterval(localScheduler, 30000); // هر ۳۰ ثانیه بررسی نوبت درون‌اپی
 
-  $("enableBtn").addEventListener("click", () => subscribePush().catch((e) => { $("notifStatus").textContent = "خطا: " + e.message; }));
+  $("enableBtn").addEventListener("click", () => subscribePush().catch((e) => { $("notifStatus").textContent = "خطا: " + e.message; $("resetBtn").style.display = "block"; }));
   $("disableBtn").addEventListener("click", () => unsubscribePush().catch((e) => { $("notifStatus").textContent = "خطا: " + e.message; }));
+  $("resetBtn").addEventListener("click", () => fullReset());
 
   // وضعیت فعلی اعلان
   try {
@@ -380,8 +406,9 @@ async function init() {
     updateNotifButtons(!!validSub);
     if (validSub) $("notifStatus").textContent = "✅ اعلان فعال است";
     else if (sub) {
-      $("notifStatus").textContent = "اشتراک اعلان این مرورگر ناقص است. در کروم: منوی ⋯ → Site settings → Clear & reset، بعد دوباره امتحان کنید — یا از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
+      $("notifStatus").textContent = "اشتراک اعلان این مرورگر ناقص است. دکمه «ریست کامل» را بزنید و دوباره امتحان کنید — یا از راه‌حل جایگزین (اپ ntfy) استفاده کنید.";
       showNtfyFallback();
+      $("resetBtn").style.display = "block";
     } else $("notifStatus").textContent = "برای دریافت یادآوری در قفل گوشی، اعلان را فعال کنید";
   } catch (e) { /* ignore */ }
 }
