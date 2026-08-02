@@ -50,7 +50,7 @@ def pages_url():
     return ""
 
 
-def publish(schedule, title, message, priority=5, tags=None, delay=None):
+def publish(schedule, title, message, priority=4, tags=None, delay=None, sid=None):
     payload = {
         "topic": schedule["topic"],
         "title": title,
@@ -61,6 +61,9 @@ def publish(schedule, title, message, priority=5, tags=None, delay=None):
         payload["tags"] = tags
     if delay:
         payload["delay"] = delay
+    headers = {"Content-Type": "application/json"}
+    if sid:
+        headers["X-Sequence-ID"] = sid
     url = pages_url()
     if url:
         payload["click"] = url
@@ -71,7 +74,7 @@ def publish(schedule, title, message, priority=5, tags=None, delay=None):
     req = urllib.request.Request(
         schedule["server"] + "/",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
@@ -89,7 +92,7 @@ def main():
             schedule,
             "🚨 تست یادآور قطره چشم",
             "این یک پیام آزمایشی است.\nزمان حال تهران: {}:{}".format(str(now.hour).zfill(2), str(now.minute).zfill(2)),
-            priority=5,
+            priority=4,
             tags=["rotating_light"],
         )
         print("TEST message sent, HTTP", status)
@@ -112,27 +115,35 @@ def main():
         return
 
     message = build_message(matched)
+    sid = "dose-{}-{}".format(now.date().isoformat(), matched["time"].replace(":", ""))
     status = publish(
         schedule,
         "🚨 {} — نوبت قطره چشم!".format(matched["time"]),
         message,
-        priority=5,
+        priority=4,
         tags=["rotating_light"],
+        sid=sid,
     )
     print("Sent reminder for {} -> HTTP {}".format(matched["time"], status))
 
     followup = schedule.get("followup_minutes", 20)
-    if isinstance(followup, int) and followup > 0:
+    if isinstance(followup, int):
+        followups = [followup] if followup > 0 else []
+    elif isinstance(followup, list):
+        followups = [int(x) for x in followup if int(x) > 0]
+    else:
+        followups = []
+    for m in followups:
         fstatus = publish(
             schedule,
             "⏰ قطره چشم هنوز؟",
             "اگر هنوز قطره را نریخته‌اید، الان بریزید:\n" + message,
-            priority=5,
+            priority=4,
             tags=["rotating_light"],
-            delay="{}m".format(followup),
+            delay="{}m".format(m),
+            sid=sid,
         )
-        print("Scheduled follow-up in {}m -> HTTP {}".format(followup, fstatus))
-
+        print("Scheduled follow-up in {}m -> HTTP {}".format(m, fstatus))
 
 if __name__ == "__main__":
     try:
