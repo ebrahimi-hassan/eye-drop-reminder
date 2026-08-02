@@ -1,9 +1,9 @@
 name: Eye Drop Reminder
 
 on:
-  # هر ۱۵ دقیقه (به وقت UTC) — اسکریپت زمان تهران را خودش حساب می‌کند
+  # هر 60 دقیقه (به وقت UTC) — اسکریپت زمان تهران را خودش حساب می‌کند
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 * * * *"
   # برای تست دستی: روی "Run workflow" بزنید و گزینه test را تیک بزنید
   workflow_dispatch:
     inputs:
