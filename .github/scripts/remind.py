@@ -50,7 +50,7 @@ def pages_url():
     return ""
 
 
-def publish(schedule, title, message, priority=4, tags=None, delay=None):
+def publish(schedule, title, message, priority=5, tags=None, delay=None):
     payload = {
         "topic": schedule["topic"],
         "title": title,
@@ -89,7 +89,7 @@ def main():
             schedule,
             "🚨 تست یادآور قطره چشم",
             "این یک پیام آزمایشی است.\nزمان حال تهران: {}:{}".format(str(now.hour).zfill(2), str(now.minute).zfill(2)),
-            priority=4,
+            priority=5,
             tags=["rotating_light"],
         )
         print("TEST message sent, HTTP", status)
