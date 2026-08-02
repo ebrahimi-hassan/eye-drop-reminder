@@ -82,4 +82,61 @@ def main():
     send_test = os.environ.get("SEND_TEST") == "1"
     schedule = load_schedule()
     now = now_tehran(schedule.get("timezone_offset_minutes", 210))
-    now
+    now_min = now.hour * 60 + now.minute
+
+    if send_test:
+        status = publish(
+            schedule,
+            "🚨 تست یادآور قطره چشم",
+            "این یک پیام آزمایشی است.\nزمان حال تهران: {}:{}".format(str(now.hour).zfill(2), str(now.minute).zfill(2)),
+            priority=4,
+            tags=["rotating_light"],
+        )
+        print("TEST message sent, HTTP", status)
+        return
+
+    week = current_week(now, schedule["weeks"])
+    if week is None:
+        print("No active week for today ({}) — nothing to send".format(now.date().isoformat()))
+        return
+
+    matched = None
+    for slot in week["slots"]:
+        sm = minutes_of(slot["time"])
+        if sm <= now_min <= sm + SLOT_WINDOW_MINUTES:
+            matched = slot
+            break
+
+    if matched is None:
+        print("No matching slot at {}:{} today".format(str(now.hour).zfill(2), str(now.minute).zfill(2)))
+        return
+
+    message = build_message(matched)
+    status = publish(
+        schedule,
+        "🚨 {} — نوبت قطره چشم!".format(matched["time"]),
+        message,
+        priority=5,
+        tags=["rotating_light"],
+    )
+    print("Sent reminder for {} -> HTTP {}".format(matched["time"], status))
+
+    followup = schedule.get("followup_minutes", 20)
+    if isinstance(followup, int) and followup > 0:
+        fstatus = publish(
+            schedule,
+            "⏰ قطره چشم هنوز؟",
+            "اگر هنوز قطره را نریخته‌اید، الان بریزید:\n" + message,
+            priority=5,
+            tags=["rotating_light"],
+            delay="{}m".format(followup),
+        )
+        print("Scheduled follow-up in {}m -> HTTP {}".format(followup, fstatus))
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("ERROR:", e, file=sys.stderr)
+        sys.exit(1)
