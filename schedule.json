@@ -3,7 +3,7 @@
   "topic": "eyedrops-9hrpy6w7v23m2o",
   "timezone_offset_minutes": 210,
   "label": "نسخه قطره چشم — بتامتازون / کلوبیوتیک",
-  "followup_minutes": 15,
+  "followup_minutes": [2, 4, 6, 8],
   "weeks": [
     {
       "id": 1,
