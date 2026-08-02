@@ -3,7 +3,7 @@
 
 const VAPID_PUBLIC_KEY =
   "BEMjM0sNxh41x0a6Lz3YaqkJ7AUhZefxsOQgw-at69i0fM1CybVBcj7-QQXf4N_tPCgFnOXdRbQ5jrSrr9Yg9Lc";
-const APP_VERSION = "5";
+const APP_VERSION = "6";
 const SCHEDULE_URL = "schedule.json";
 const doneKey = (dateStr, time) => "done:" + dateStr + ":" + time;
 
@@ -257,7 +257,6 @@ async function fullReset() {
     } catch (e) { /* ignore */ }
     localStorage.clear();
     $("notifStatus").textContent = "✅ ریست کامل انجام شد. حالا برنامه را کاملاً ببندید و دوباره باز کنید، سپس «فعال کردن اعلان» را بزنید.";
-    $("resetBtn").style.display = "none";
   } catch (e) {
     $("notifStatus").textContent = "خطا در ریست: " + e.message;
   }
